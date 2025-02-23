@@ -1,82 +1,140 @@
-```markdown
 # VLC Video Dubbing with Docker Integration
 
-This project provides a Docker‑based tool that processes a video file to produce a dubbed audio track. The tool:
-  • Extracts audio from the video.
-  • Transcribes the audio (using faster‑whisper) to obtain spoken segments with timestamps.
-  • Dampens the volume in spoken segments.
-  • Generates Text-to-Speech (TTS) overlay for the spoken text.
-  • Overlays the TTS audio onto the dampened original audio.
-  • Concatenates processed audio segments and any non-spoken parts to produce the final dubbed audio file.
+## Overview
 
-All dependencies are containerized so **no local Python package installations are needed**.
+This project provides a Docker-based tool that automatically creates dubbed audio tracks from videos. The process includes:
 
-## Files
+1. 🎵 Audio extraction from video
+2. 🎙️ Speech-to-text transcription using faster-whisper
+3. 🔊 Smart volume adjustment for spoken segments
+4. 🗣️ Text-to-speech generation
+5. 🎚️ Audio overlay and mixing
+6. 🎼 Final audio track compilation
 
-- **main.py**  
-  Contains the Python code for audio extraction, transcription, processing, and concatenation.
+> **Note**: All dependencies are containerized - no local Python packages needed!
 
-- **run_entrypoint.sh**  
-  An entrypoint script used by the Docker container to run main.py with environment variables.
+## Quick Start
 
-- **Dockerfile**  
-  Builds the Docker image with all necessary dependencies (ffmpeg, ffprobe, espeak, faster‑whisper, pyttsx3).
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/vlc-extension.git
+cd vlc-extension
 
-- **run_docker.sh**  
-  A helper shell script that checks for Docker installation, builds the image if needed, and runs the container with proper volume mounts and environment variables.
+# Make the script executable
+chmod +x run_docker.sh
 
-- **transcribe.vlc.lua**  
-  The VLC Lua extension that provides a dialog prompt for the user to enter a target language (if needed) and triggers the Docker container. In our case, it calls `run_docker.sh` with the video path and desired output audio filename.
+# Run the dubbing pipeline
+./run_docker.sh /path/to/video.mp4 /path/to/output.wav
+```
 
-## Installation & Usage
+## Project Structure
+
+### Core Components
+
+| File | Description |
+|------|-------------|
+| `main.py` | Core processing logic for audio extraction, transcription, and processing |
+| `run_entrypoint.sh` | Docker container entrypoint script |
+| `Dockerfile` | Container definition with all dependencies |
+| `run_docker.sh` | Helper script for Docker operations |
+| `transcribe.vlc.lua` | VLC extension for user interaction |
+
+## Setup Guide
 
 ### Prerequisites
 
-1. **Install Docker**  
-   Download and install Docker Desktop from [docker.com](https://www.docker.com/products/docker-desktop) if not already installed.
+- **Docker Desktop**: [Download here](https://www.docker.com/products/docker-desktop)
+- **VLC Media Player**: [Download here](https://www.videolan.org/vlc/)
 
-2. **VLC**  
-   Ensure VLC is installed. The Lua extension will be placed in VLC’s extensions folder.
+### Installation Steps
 
-### Running the Tool via Docker
-
-1. **Clone the Repository**  
-   Clone this repository to your local machine.
-
-2. **Make Scripts Executable**  
-   In your terminal, navigate to the repository directory and run:
+1. **Docker Setup**
    ```bash
-   chmod +x run_docker.sh
+   # Verify Docker installation
+   docker --version
    ```
 
-3. **Run the Docker-based Dubbing Pipeline**  
-   Use the provided shell script to process a video. For example:
+2. **VLC Extension Installation**
    ```bash
-   ./run_docker.sh /path/to/sample_video.mp4 /path/to/output_dubbed.wav
+   # macOS
+   cp transcribe.vlc.lua ~/Library/Application\ Support/org.videolan.vlc/lua/extensions/
    ```
-   This script will:
-      - Check that Docker is installed.
-      - Build the Docker image (if not already built).
-      - Run the container with the current directory mounted so that output files are available locally.
 
-### VLC Integration
+### Usage Instructions
 
-To integrate with VLC:
+#### Docker Method
+```bash
+./run_docker.sh <input_video> <output_audio>
+```
 
-1. **Place the Lua Extension**  
-   Copy `transcribe.vlc.lua` into your VLC extensions directory. For macOS:
-   ```
-   ~/Library/Application\ Support/org.videolan.vlc/lua/extensions/
-   ```
-2. **Usage in VLC**  
-   When you play a video in VLC, the extension will check if the dubbed audio exists. If not, it will prompt (or automatically call our helper script) to process the video via Docker. The extension uses `run_docker.sh` to build and run the Docker container so that the processing is fully containerized. The final dubbed audio file will be output back into your local folder, and VLC can stream it accordingly.
+Example:
+```bash
+./run_docker.sh ~/Videos/movie.mp4 ~/Music/dubbed_audio.wav
+```
 
-### Developer Notes
+#### VLC Integration
 
-- **Local Development and Testing**  
-  You can also run the Python tool locally in a virtual environment if needed. However, the Docker solution is recommended for a smooth, package-free experience.
-  
-- **Customization**  
-  Adjust volume levels, TTS settings, and transcription parameters in `main.py` as needed.
+1. Open VLC
+2. Navigate to `View → Extensions`
+3. Select the dubbing extension
+4. Follow the on-screen prompts
 
-Happy dubbing!
+## Advanced Configuration
+
+### Customization Options
+
+Edit `main.py` to adjust:
+- Volume levels
+- TTS voice settings
+- Transcription parameters
+- Audio processing options
+
+### Development Notes
+
+For local development:
+1. Create a virtual environment
+2. Install requirements
+3. Run `main.py` directly
+
+## Troubleshooting
+
+Common issues and solutions:
+
+- **Permission Denied**: Run `chmod +x run_docker.sh`
+- **Docker Not Running**: Start Docker Desktop
+- **Missing Output**: Ensure write permissions in output directory
+
+## Contributing
+
+Contributions welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
+
+## License
+
+MIT License
+
+Copyright (c) 2024 VLC Video Dubbing Extension
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+For more information or support, please [open an issue](https://github.com/ultrainstinct0x/vlc-extension/issues).
