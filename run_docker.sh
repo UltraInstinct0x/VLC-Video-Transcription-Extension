@@ -9,15 +9,23 @@ then
 fi
 
 if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <video_path> <output_audio>"
+    echo "Usage: $0 <video_path> <output_path>"
     exit 1
 fi
 
+# Create output file to make realpath work
 VIDEO_PATH=$(realpath "$1")
-OUTPUT_AUDIO=$(realpath "$2")
+OUTPUT_PATH=$(dirname "$2")/$(basename "$2")
 
 echo "[INFO] Building Docker image (if not already built)..."
 docker build -t vlc-extension .
 
 echo "[INFO] Running Docker container..."
-docker run --rm -v "$(pwd):/app" -e VIDEO_PATH="$VIDEO_PATH" -e OUTPUT_AUDIO="$OUTPUT_AUDIO" vlc-extension
+echo "[INFO] Command: python main.py \"/input/$(basename "$VIDEO_PATH")\" \"/output/$(basename "$OUTPUT_PATH")\""
+docker run --rm \
+    -v "$(dirname "$VIDEO_PATH")":/input \
+    -v "$(dirname "$OUTPUT_PATH")":/output \
+    vlc-extension \
+    python main.py \
+        "/input/$(basename "$VIDEO_PATH")" \
+        "/output/$(basename "$OUTPUT_PATH")"

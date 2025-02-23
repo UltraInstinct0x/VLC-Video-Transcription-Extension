@@ -10,10 +10,11 @@ This script processes a video file as follows:
        - Overlays the TTS audio on the lowered segment.
   4. Splits the entire audio into chunks (non-spoken and processed spoken segments)
      and concatenates them into a final dubbed audio file.
+  5. Generates a subtitle file for the transcribed text.
 Usage:
-  python main.py <video_path> <output_audio>
+  python main.py <video_path> <output_audio> <output_subtitle>
 Example:
-  python main.py /app/sample_video.mp4 /app/output_dubbed.wav
+  python main.py /app/sample_video.mp4 /app/output_dubbed.wav /app/output_subtitle.srt
 """
 
 import os
@@ -25,13 +26,14 @@ from faster_whisper import WhisperModel
 import pyttsx3
 
 def format_timestamp(seconds: float) -> str:
-    td = timedelta(seconds=seconds)
-    total_seconds = int(td.total_seconds())
-    hours = total_seconds // 3600
-    minutes = (total_seconds % 3600) // 60
-    secs = total_seconds % 60
-    milliseconds = int((td.total_seconds() - total_seconds) * 1000)
-    return f"{hours:02}:{minutes:02}:{secs:02},{milliseconds:03}"
+    """Convert seconds to SRT timestamp format: HH:MM:SS,mmm"""
+    hours = int(seconds // 3600)
+    seconds %= 3600
+    minutes = int(seconds // 60)
+    seconds %= 60
+    milliseconds = int((seconds % 1) * 1000)
+    seconds = int(seconds)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
 
 def extract_audio(video_path: str, audio_filename: str):
     cmd = [
@@ -135,11 +137,39 @@ def process_spoken_segment(full_audio: str, segment, index: int) -> str:
 
     return seg_final
 
-def transcribe_and_dub(video_path: str, output_audio: str):
-    base, _ = os.path.splitext(video_path)
-    full_audio = base + "_full.wav"
-    extract_audio(video_path, full_audio)
-    total_duration = get_audio_duration(full_audio)
+def generate_subtitle(segments, subtitle_path):
+    """Generate SRT subtitle file from transcription segments"""
+    with open(subtitle_path, 'w', encoding='utf-8') as f:
+        for i, segment in enumerate(segments, 1):
+            f.write(f"{i}\n")
+            f.write(f"{format_timestamp(segment.start)} --> {format_timestamp(segment.end)}\n")
+            f.write(f"{segment.text}\n\n")
+
+def create_final_video(input_video: str, dubbed_audio: str, output_video: str):
+    """Create final video with dubbed audio track"""
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i", input_video,      # Original video
+        "-i", dubbed_audio,     # Dubbed audio
+        "-map", "0:v",         # Use video from first input
+        "-map", "1:a",         # Use audio from second input
+        "-c:v", "copy",        # Copy video codec
+        "-shortest",           # Match shortest stream length
+        output_video
+    ]
+    print("[INFO] Creating final video with dubbed audio...")
+    subprocess.run(cmd, check=True)
+    print(f"[INFO] Final video saved as {output_video}")
+
+def transcribe_and_dub(video_path: str, output_path: str):
+    base, ext = os.path.splitext(output_path)
+    output_audio = f"{base}_dubbed.wav"
+    output_subtitle = f"{base}.srt"
+    output_video = f"{base}_dubbed{ext}"
+
+    extract_audio(video_path, output_audio)
+    total_duration = get_audio_duration(output_audio)
     print(f"[INFO] Audio duration: {total_duration:.2f} seconds")
 
     print("[INFO] Running transcription with faster-whisper...")
@@ -156,11 +186,11 @@ def transcribe_and_dub(video_path: str, output_audio: str):
         if segment.start > current_time:
             non_speech = f"chunk_{seg_index}_nonspeech.wav"
             duration = segment.start - current_time
-            extract_audio_segment(full_audio, current_time, duration, non_speech)
+            extract_audio_segment(output_audio, current_time, duration, non_speech)
             processed_chunks.append(non_speech)
             seg_index += 1
 
-        processed_segment = process_spoken_segment(full_audio, segment, seg_index)
+        processed_segment = process_spoken_segment(output_audio, segment, seg_index)
         processed_chunks.append(processed_segment)
         seg_index += 1
 
@@ -169,23 +199,29 @@ def transcribe_and_dub(video_path: str, output_audio: str):
     if current_time < total_duration:
         non_speech = f"chunk_{seg_index}_nonspeech.wav"
         duration = total_duration - current_time
-        extract_audio_segment(full_audio, current_time, duration, non_speech)
+        extract_audio_segment(output_audio, current_time, duration, non_speech)
         processed_chunks.append(non_speech)
 
     print("[INFO] Concatenating audio chunks...")
     concatenate_audios(processed_chunks, output_audio)
     print(f"[INFO] Final dubbed audio saved as {output_audio}")
 
+    transcription = [{"start": seg.start, "end": seg.end, "text": seg.text} for seg in segments]
+    generate_subtitle(transcription, output_subtitle)
+    print(f"[INFO] Subtitle file saved as {output_subtitle}")
+
+    create_final_video(video_path, output_audio, output_video)
+
     for chunk in processed_chunks:
         if os.path.exists(chunk):
             os.remove(chunk)
-    if os.path.exists(full_audio):
-        os.remove(full_audio)
+    if os.path.exists(output_audio):
+        os.remove(output_audio)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Extract audio, dampen spoken segments, and overlay TTS dubbing.")
-    parser.add_argument("video", help="Path to the video file")
-    parser.add_argument("output", help="Filename for the final dubbed audio output (e.g., /app/output_dubbed.wav)")
+    parser = argparse.ArgumentParser(description="Create dubbed video with subtitles")
+    parser.add_argument("video", help="Path to the input video file")
+    parser.add_argument("output", help="Path to the output video file (without extension)")
     args = parser.parse_args()
 
     transcribe_and_dub(args.video, args.output)
