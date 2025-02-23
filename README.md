@@ -1,4 +1,24 @@
-# VLC Video Dubbing with Docker Integration
+# VLC AI Auto-Dubbing Extension 🎙️🔄
+
+> Automatically dub and transcribe any video in VLC using AI - powered by faster-whisper
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## 🎯 What it does
+
+Transform any video played in VLC with AI-powered dubbing and transcription:
+- 🤖 Automatic speech recognition and translation
+- 🗣️ Natural-sounding AI voice synthesis
+- 🎚️ Smart volume mixing and adjustment
+- 🎬 Direct VLC integration
+- 🐳 Easy setup with Docker
+
+## Key Features
+
+- **Zero Dependencies**: All AI models run in Docker
+- **Easy Integration**: Works as a native VLC extension
+- **Offline Processing**: Process videos locally on your machine
+- **High Quality**: Uses state-of-the-art AI models
 
 ## Overview
 
